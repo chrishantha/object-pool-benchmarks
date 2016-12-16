@@ -70,8 +70,8 @@ fi
 if [[ "quick" == "$MODE" ]]; then
     forks=1
     warmup_iterations=1
-    iterations=3
-    threads=(1 10)
+    iterations=1
+    threads=(1)
     poolSizes=(10)
 elif [[ "medium" == "$MODE" ]]; then
     forks=2
@@ -92,7 +92,7 @@ else
 fi
 
 objectpools_benchmark() {
-    echo Running object pool benchmark. Benchmark Mode: $1 Threads: $2 Pool Size: $3 Time Unit: $4
+    echo "# Running object pool benchmark. Benchmark Mode: $1 Threads: $2 Pool Size: $3 Time Unit: $4"
     java -jar $ROOT_DIR/target/benchmarks.jar -jvmArgs "$JVM_ARGS" -bm $1 \
         -f $forks -wi $warmup_iterations -i $iterations -t $2 -p poolSize=$3 -tu $4 \
         -rff "$RESULTS_DIR/results-$1-$2-$3.csv" -rf csv -e simple
@@ -110,7 +110,7 @@ run_benchmark() {
             objectpools_benchmark $1 $t $p $2
             benchmark_iteration=$(($benchmark_iteration + 1))
             awk -v i="$benchmark_iteration" -v t="$total" \
-                'BEGIN{printf "Object Pools Benchmark Progress: %.2f%s complete\n", i/t * 100, "%"}'
+                'BEGIN{printf "# Object Pools Benchmark Progress: %.2f%s complete\n", i/t * 100, "%"}'
         done
     done
 }
