@@ -183,7 +183,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jmh.version>1.17.2</jmh.version>
+        <jmh.version>1.18</jmh.version>
         <javac.target>1.8</javac.target>
         <uberjar.name>benchmarks</uberjar.name>
         <!-- Object Pool Implementations -->
@@ -191,7 +191,7 @@
         <commons.pool2.version>2.4.2</commons.pool2.version>
         <eraasoft.objectpool.version>1.1.2</eraasoft.objectpool.version>
         <fast.object.pool.version>2.0.0</fast.object.pool.version>
-        <vibur.object.pool.version>13.0</vibur.object.pool.version>
+        <vibur.object.pool.version>16.2</vibur.object.pool.version>
         <stormpot.version>2.4.1</stormpot.version>
     </properties>
 
