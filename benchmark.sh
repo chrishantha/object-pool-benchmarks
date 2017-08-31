@@ -18,12 +18,15 @@
 # ----------------------------------------------------------------------------
 
 ROOT_DIR=$(dirname "$0")
+# Benchmark using Throughput and Sample Modes
+BM_MODE="thrpt,sample"
+# Results will be in microseconds
+TIME_UNIT="us"
 
 if [[ ! -f $ROOT_DIR/target/benchmarks.jar  ]]; then
     echo "Please build the benchmark project"
     exit 1
 fi
-
 
 RESULTS_DIR=$ROOT_DIR/results
 mkdir -p $RESULTS_DIR
@@ -35,10 +38,6 @@ threads=(1 10 20)
 poolSizes=(10 50)
 
 objectpools_benchmark() {
-    # Benchmark using Throughput and Sample Modes
-    BM_MODE="thrpt,sample"
-    # Results will be in milliseconds
-    TIME_UNIT="ms"
     echo "# Running object pool benchmark. Benchmark Mode: $BM_MODE Time Unit: $TIME_UNIT Threads: $1 Pool Size: $2"
     java -Xms1g -Xmx1g -jar $ROOT_DIR/target/benchmarks.jar -jvmArgs "-Xms1g -Xmx1g" -bm $BM_MODE -tu $TIME_UNIT \
         -f $forks -wi $warmup_iterations -i $iterations -t $1 -p poolSize=$2 \
