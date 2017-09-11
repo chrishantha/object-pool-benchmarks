@@ -20,6 +20,7 @@ import glob
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as tkr
+import numpy as np
 import pandas as pd
 import seaborn as sns
 
@@ -50,7 +51,64 @@ def save_plot(df, title, filename, print_data=False, formatter=tkr.FuncFormatter
     plt.close(fig)
 
 
+# Plot bar charts with error bars
+# Some links helped:
+# https://stackoverflow.com/a/42033734/1955702
+# https://stackoverflow.com/a/30428808/1955702
+# https://matplotlib.org/devdocs/gallery/api/barchart.html#sphx-glr-gallery-api-barchart-py
+def barplot_with_errorbars(x, y, yerr, threads, benchmarks, label, **kwargs):
+    data = kwargs.pop("data")
+    x = np.arange(len(threads))
+    offsets = (np.arange(len(benchmarks)) - np.arange(len(benchmarks)).mean()) / (len(benchmarks) + 1.)
+    width = np.diff(offsets).mean()
+    # Make sure data is sorted by Threads, which is in x axis.
+    data = data.sort_values('Threads')
+    for i, benchmark in enumerate(benchmarks):
+        if label == benchmark:
+            plt.bar(x + offsets[i], data['Score'], width=width, label=label, yerr=data['Score Error (99.9%)'],
+                    capsize=3)
+    plt.xticks(x, threads)
+
+
+def save_plot_with_error_bars(df, title, filename, print_data=False,
+                              formatter=tkr.FuncFormatter(lambda y, p: "{:,}".format(y))):
+    unit = df['Unit'].unique()[0]
+    print("Creating chart: " + title + ", filename: " + filename + ".")
+    if print_data:
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            print(df)
+    fig, ax = plt.subplots()
+
+    threads = sorted(df['Threads'].unique())
+    benchmarks = sorted(df['Benchmark'].unique())
+
+    g = sns.FacetGrid(df, hue="Benchmark", col="Param: poolSize",
+                      size=6, aspect=1, col_wrap=2)
+    g = g.map_dataframe(barplot_with_errorbars, "Threads", "Score", "Score Error (99.9%)", threads, benchmarks)
+    for ax in g.axes.flatten():
+        ax.yaxis.set_major_formatter(formatter)
+    g.set_axis_labels(y_var="Score (" + unit + ")")
+    plt.subplots_adjust(top=0.9, left=0.1)
+    g.fig.suptitle(title)
+    plt.legend(loc='upper right', frameon=True)
+    plt.savefig(filename)
+    plt.clf()
+    plt.close(fig)
+
+
+def save_plots(df, title, filename_prefix):
+    # Save two plots with and without error bars
+    save_plot(df, title, filename_prefix + '.png')
+    save_plot_with_error_bars(df, title, filename_prefix + '-with-error-bars.png')
+
+
 def replace_benchmark_name(df):
+    return df.replace(r'^com\.github\.chrishantha\.microbenchmark\.objectpool\.(.*)Benchmark.useObject$',
+                      r'\1',
+                      regex=True)
+
+
+def replace_benchmark_percentile_name(df):
     return df.replace(
         [r'^com\.github\.chrishantha\.microbenchmark\.objectpool\.(.*)Benchmark.useObject:useObject(.*)$'], [r'\1\2'],
         regex=True)
@@ -58,7 +116,7 @@ def replace_benchmark_name(df):
 
 def save_percentile_plot(df, title_percentile, percentile):
     df_sample_percentile = df.loc[df['Benchmark'].str.endswith(':useObject·' + percentile)]
-    df_sample_percentile = replace_benchmark_name(df_sample_percentile)
+    df_sample_percentile = replace_benchmark_percentile_name(df_sample_percentile)
     save_plot(df_sample_percentile, title_percentile + "th Percentile Latency Comparison",
               "latency" + title_percentile + ".png", formatter=tkr.FormatStrFormatter('%.2f'))
 
@@ -71,23 +129,24 @@ def main():
 
     print("\nCreating charts...\n")
     df = pd.concat(map(pd.read_csv, all_results), ignore_index=True)
-
-    df_thrpt = df.loc[df['Mode'] == "thrpt"]
-    df_thrpt = df_thrpt.replace(r'^com\.github\.chrishantha\.microbenchmark\.objectpool\.(.*)Benchmark.useObject$',
-                                r'\1',
-                                regex=True)
-    df_thrpt = df_thrpt.replace(
+    df = replace_benchmark_name(df)
+    df = df.replace(
         'com.github.chrishantha.microbenchmark.objectpool.TestObjectBenchmark.expensiveObjectCreate',
         'OnDemandExpensiveObject', regex=False)
+    df_thrpt = df.loc[df['Mode'] == "thrpt"]
 
     mask = df_thrpt['Benchmark'].isin(['OnDemandExpensiveObject'])
-    save_plot(df_thrpt[~mask], "Throughput Comparison", "thrpt-all.png")
+    save_plots(df_thrpt[~mask], "Throughput Comparison", "thrpt-all")
 
-    save_plot(df_thrpt[df_thrpt['Benchmark'].isin(
-        ['OnDemandExpensiveObject', 'CommonsPool2GenericObjectPool', 'StormpotBlazePool'])],
-              "On Demand Object Creation vs Object Pooling Throughput Comparison", "thrpt-ondemand-vs-pooling.png")
+    save_plots(df_thrpt[df_thrpt['Benchmark'].isin(['OnDemandExpensiveObject', 'CommonsPool2GenericObjectPool'])],
+               "On Demand Object Creation vs Object Pooling Throughput Comparison", "thrpt-ondemand-vs-pooling")
 
     df_sample = df.loc[df['Mode'] == "sample"]
+
+    save_plots(df_sample[~df_sample['Benchmark'].str.contains('·p')], "Sample Time Comparison", "sample-all")
+
+    save_plots(df_sample[df_sample['Benchmark'].isin(['OnDemandExpensiveObject', 'CommonsPool2GenericObjectPool'])],
+               "On Demand Object Creation vs Object Pooling Sample Time Comparison", "sample-ondemand-vs-pooling")
 
     save_percentile_plot(df_sample, '50', 'p0.50')
     save_percentile_plot(df_sample, '90', 'p0.90')
@@ -98,7 +157,7 @@ def main():
     save_percentile_plot(df_sample, '100', 'p1.00')
 
     df_sample_percentiles = df_sample.loc[df_sample['Benchmark'].str.contains(':useObject·p')]
-    df_sample_percentiles = replace_benchmark_name(df_sample_percentiles)
+    df_sample_percentiles = replace_benchmark_percentile_name(df_sample_percentiles)
     df_sample_percentiles['Pool'] = df_sample_percentiles['Benchmark'].str.extract('(?P<Pool>\w+Pool)', expand=True)
 
     unique_pools = df_sample_percentiles['Pool'].unique()
