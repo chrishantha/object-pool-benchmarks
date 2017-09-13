@@ -45,7 +45,7 @@ def save_plot(df, title, filename, print_data=False, formatter=tkr.FuncFormatter
     g = sns.factorplot(x="Threads", y="Score",
                        hue="Benchmark", col="Param: poolSize",
                        data=df, kind='bar',
-                       size=6, aspect=1, col_wrap=2, legend=False)
+                       size=5, aspect=1, col_wrap=2, legend=False)
     for ax in g.axes.flatten():
         ax.yaxis.set_major_formatter(formatter)
     g.set_axis_labels(y_var="Score (" + unit + ")")
@@ -88,7 +88,7 @@ def save_plot_with_error_bars(df, title, filename, print_data=False,
     benchmarks = sorted(df['Benchmark'].unique())
 
     g = sns.FacetGrid(df, hue="Benchmark", col="Param: poolSize",
-                      size=6, aspect=1, col_wrap=2)
+                      size=5, aspect=1, col_wrap=2)
     g = g.map_dataframe(barplot_with_errorbars, "Threads", "Score", "Score Error (99.9%)", threads, benchmarks)
     for ax in g.axes.flatten():
         ax.yaxis.set_major_formatter(formatter)
@@ -116,7 +116,7 @@ def save_lmplot(df, x, title, filename, print_data=False):
         print_data(df)
     fig, ax = plt.subplots()
     markers_length = len(df["Benchmark"].unique())
-    g = sns.lmplot(data=df, x=x, y="Score", hue="Benchmark", size=8, legend=False, x_jitter=0.1, y_jitter=0.1,
+    g = sns.lmplot(data=df, x=x, y="Score", hue="Benchmark", size=6, legend=False, x_jitter=0.2, y_jitter=0.5,
                    markers=['o', 'v', '^', '<', '>', '+', 's', 'p', '*', 'x', 'D'][:markers_length])
     for ax in g.axes.flatten():
         ax.yaxis.set_major_formatter(
