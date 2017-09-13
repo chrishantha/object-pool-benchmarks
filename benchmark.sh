@@ -31,16 +31,19 @@ fi
 RESULTS_DIR=$ROOT_DIR/results
 mkdir -p $RESULTS_DIR
 
-forks=3
-warmup_iterations=5
-iterations=5
-threads=(1 10 20)
-poolSizes=(10 50)
+forks=2
+warmup_iterations=3
+warmup_time=1
+iterations=3
+measurement_time=2
+threads=(1 20 40 60)
+poolSizes=(20 40 60 80)
 
 objectpools_benchmark() {
     echo "# Running object pool benchmark. Benchmark Mode: $BM_MODE Time Unit: $TIME_UNIT Threads: $1 Pool Size: $2"
     java -Xms1g -Xmx1g -jar $ROOT_DIR/target/benchmarks.jar -jvmArgs "-Xms1g -Xmx1g" -bm $BM_MODE -tu $TIME_UNIT \
         -f $forks -wi $warmup_iterations -i $iterations -t $1 -p poolSize=$2 \
+        -w $warmup_time -r $measurement_time \
         -rff "$RESULTS_DIR/results-$1-threads-with-pool-size-$2.csv" -rf csv -e simple
 }
 
