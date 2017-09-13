@@ -36,15 +36,14 @@ def print_data(df):
         print(df)
 
 
-def save_plot(df, title, filename, print_data=False, formatter=tkr.FuncFormatter(lambda y, p: "{:,}".format(y))):
+def save_plot(df, title, filename, x="Threads", col="Param: poolSize", print_data=False,
+              formatter=tkr.FuncFormatter(lambda y, p: "{:,}".format(y))):
     unit = df['Unit'].unique()[0]
     print("Creating chart: " + title + ", filename: " + filename + ".")
     if print_data:
         print_data(df)
     fig, ax = plt.subplots()
-    g = sns.factorplot(x="Threads", y="Score",
-                       hue="Benchmark", col="Param: poolSize",
-                       data=df, kind='bar',
+    g = sns.factorplot(x=x, y="Score", hue="Benchmark", col=col, data=df, kind='bar',
                        size=5, aspect=1, col_wrap=2, legend=False)
     for ax in g.axes.flatten():
         ax.yaxis.set_major_formatter(formatter)
@@ -62,21 +61,21 @@ def save_plot(df, title, filename, print_data=False, formatter=tkr.FuncFormatter
 # https://stackoverflow.com/a/42033734/1955702
 # https://stackoverflow.com/a/30428808/1955702
 # https://matplotlib.org/devdocs/gallery/api/barchart.html#sphx-glr-gallery-api-barchart-py
-def barplot_with_errorbars(x, y, yerr, threads, benchmarks, label, **kwargs):
+def barplot_with_errorbars(x, y, yerr, x_values, benchmarks, label, **kwargs):
+    # x_values and benchmarks must be sorted
     data = kwargs.pop("data")
-    x = np.arange(len(threads))
+    n = np.arange(len(x_values))
     offsets = (np.arange(len(benchmarks)) - np.arange(len(benchmarks)).mean()) / (len(benchmarks) + 1.)
     width = np.diff(offsets).mean()
-    # Make sure data is sorted by Threads, which is in x axis.
-    data = data.sort_values('Threads')
+    # Make sure x axis data is sorted
+    data = data.sort_values(x)
     for i, benchmark in enumerate(benchmarks):
         if label == benchmark:
-            plt.bar(x + offsets[i], data['Score'], width=width, label=label, yerr=data['Score Error (99.9%)'],
-                    capsize=3)
-    plt.xticks(x, threads)
+            plt.bar(n + offsets[i], data[y], width=width, label=label, yerr=data[yerr], capsize=2)
+    plt.xticks(n, x_values)
 
 
-def save_plot_with_error_bars(df, title, filename, print_data=False,
+def save_plot_with_error_bars(df, title, filename, x="Threads", col="Param: poolSize", print_data=False,
                               formatter=tkr.FuncFormatter(lambda y, p: "{:,}".format(y))):
     unit = df['Unit'].unique()[0]
     print("Creating chart: " + title + ", filename: " + filename + ".")
@@ -84,12 +83,11 @@ def save_plot_with_error_bars(df, title, filename, print_data=False,
         print_data(df)
     fig, ax = plt.subplots()
 
-    threads = sorted(df['Threads'].unique())
+    x_values = sorted(df[x].unique())
     benchmarks = sorted(df['Benchmark'].unique())
 
-    g = sns.FacetGrid(df, hue="Benchmark", col="Param: poolSize",
-                      size=5, aspect=1, col_wrap=2)
-    g = g.map_dataframe(barplot_with_errorbars, "Threads", "Score", "Score Error (99.9%)", threads, benchmarks)
+    g = sns.FacetGrid(df, hue="Benchmark", col=col, size=5, aspect=1, col_wrap=2)
+    g = g.map_dataframe(barplot_with_errorbars, x, "Score", "Score Error (99.9%)", x_values, benchmarks)
     for ax in g.axes.flatten():
         ax.yaxis.set_major_formatter(formatter)
     g.set_axis_labels(y_var="Score (" + unit + ")")
@@ -101,12 +99,12 @@ def save_plot_with_error_bars(df, title, filename, print_data=False,
     plt.close(fig)
 
 
-def save_plots(df, title, filename_prefix):
+def save_plots(df, title, filename_prefix, x="Threads", col="Param: poolSize"):
     # Save two plots with and without error bars
     # Plotting errorbars with dataframe data in factorplot is not directly supported.
     # First plot is important and must be used to verify the accuracy of the plot with error bars.
-    save_plot(df, title, filename_prefix + '.png')
-    save_plot_with_error_bars(df, title, filename_prefix + '-with-error-bars.png')
+    save_plot(df, title, filename_prefix + '.png', x=x, col=col)
+    save_plot_with_error_bars(df, title, filename_prefix + '-with-error-bars.png', x=x, col=col)
 
 
 def save_lmplot(df, x, title, filename, print_data=False):
@@ -163,21 +161,27 @@ def main():
     df_thrpt = df.loc[df['Mode'] == "thrpt"]
 
     mask = df_thrpt['Benchmark'].isin(['OnDemandExpensiveObject'])
-    save_plots(df_thrpt[~mask], "Throughput Comparison", "thrpt-all")
+    save_plots(df_thrpt[~mask], "Throughput vs Threads Comparison", "thrpt-vs-threads")
+    save_plots(df_thrpt[~mask], "Throughput vs Pool Sizes Comparison", "thrpt-vs-pool-sizes", col="Threads",
+               x="Param: poolSize")
 
-    save_lmplot(df_thrpt, "Threads", "Throuphput vs Threads", "lmplot_thrpt_vs_threads.png")
-    save_lmplot(df_thrpt[~pd.isnull(df_thrpt['Param: poolSize'])], "Param: poolSize", "Throuphput vs Pool Sizes",
-                "lmplot_thrpt_vs_pool_sizes.png")
+    save_lmplot(df_thrpt, "Threads", "Throughput vs Threads", "lmplot-thrpt-vs-threads.png")
+    save_lmplot(df_thrpt[~pd.isnull(df_thrpt['Param: poolSize'])], "Param: poolSize", "Throughput vs Pool Sizes",
+                "lmplot-thrpt-vs-pool-sizes.png")
 
     df_sample = df.loc[df['Mode'] == "sample"]
     # Score Error (99.9%) is NaN for percentiles
     df_sample_without_percentiles = df_sample[~pd.isnull(df_sample['Score Error (99.9%)'])]
+    df_sample_pools_without_percentiles = df_sample_without_percentiles[
+        ~pd.isnull(df_sample_without_percentiles['Param: poolSize'])]
 
-    save_plots(df_sample_without_percentiles, "Sample Time Comparison", "sample-all")
+    save_plots(df_sample_without_percentiles, "Sample Time vs Threads Comparison", "sample-time-vs-threads")
+    save_plots(df_sample_pools_without_percentiles, "Sample Time vs Pool Sizes Comparison", "sample-time-vs-pool-sizes",
+               col="Threads", x="Param: poolSize")
 
-    save_lmplot(df_sample_without_percentiles, "Threads", "Sample Time vs Threads", "lmplot_sample_vs_threads.png")
-    save_lmplot(df_sample_without_percentiles[~pd.isnull(df_sample_without_percentiles['Param: poolSize'])],
-                "Param: poolSize", "Sample Time vs Pool Sizes", "lmplot_sample_vs_pool_sizes.png")
+    save_lmplot(df_sample_without_percentiles, "Threads", "Sample Time vs Threads", "lmplot-sample-vs-threads.png")
+    save_lmplot(df_sample_pools_without_percentiles, "Param: poolSize", "Sample Time vs Pool Sizes",
+                "lmplot-sample-vs-pool-sizes.png")
 
     save_percentile_plot(df_sample, '50', 'p0.50')
     save_percentile_plot(df_sample, '90', 'p0.90')
