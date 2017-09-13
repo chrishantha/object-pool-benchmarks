@@ -36,21 +36,21 @@ def print_data(df):
         print(df)
 
 
-def save_plot(df, title, filename, x="Threads", col="Param: poolSize", print_data=False,
+def save_plot(df, title, filename, x="Threads", hue="Benchmark", col="Param: poolSize", col_wrap=2, print_data=False,
               formatter=tkr.FuncFormatter(lambda y, p: "{:,}".format(y))):
     unit = df['Unit'].unique()[0]
     print("Creating chart: " + title + ", filename: " + filename + ".")
     if print_data:
         print_data(df)
     fig, ax = plt.subplots()
-    g = sns.factorplot(x=x, y="Score", hue="Benchmark", col=col, data=df, kind='bar',
-                       size=5, aspect=1, col_wrap=2, legend=False)
+    g = sns.factorplot(x=x, y="Score", hue=hue, col=col, data=df, kind='bar',
+                       size=5, aspect=1, col_wrap=col_wrap, legend=False)
     for ax in g.axes.flatten():
         ax.yaxis.set_major_formatter(formatter)
     g.set_axis_labels(y_var="Score (" + unit + ")")
     plt.subplots_adjust(top=0.9, left=0.1)
     g.fig.suptitle(title)
-    plt.legend(loc='upper left', frameon=True)
+    plt.legend(loc='best', title=hue, frameon=True)
     plt.savefig(filename)
     plt.clf()
     plt.close(fig)
@@ -61,21 +61,22 @@ def save_plot(df, title, filename, x="Threads", col="Param: poolSize", print_dat
 # https://stackoverflow.com/a/42033734/1955702
 # https://stackoverflow.com/a/30428808/1955702
 # https://matplotlib.org/devdocs/gallery/api/barchart.html#sphx-glr-gallery-api-barchart-py
-def barplot_with_errorbars(x, y, yerr, x_values, benchmarks, label, **kwargs):
+def barplot_with_errorbars(x, y, yerr, x_values, hue_values, label, **kwargs):
     # x_values and benchmarks must be sorted
     data = kwargs.pop("data")
     n = np.arange(len(x_values))
-    offsets = (np.arange(len(benchmarks)) - np.arange(len(benchmarks)).mean()) / (len(benchmarks) + 1.)
+    offsets = (np.arange(len(hue_values)) - np.arange(len(hue_values)).mean()) / (len(hue_values) + 1.)
     width = np.diff(offsets).mean()
     # Make sure x axis data is sorted
     data = data.sort_values(x)
-    for i, benchmark in enumerate(benchmarks):
+    for i, benchmark in enumerate(hue_values):
         if label == benchmark:
             plt.bar(n + offsets[i], data[y], width=width, label=label, yerr=data[yerr], capsize=2)
     plt.xticks(n, x_values)
 
 
-def save_plot_with_error_bars(df, title, filename, x="Threads", col="Param: poolSize", print_data=False,
+def save_plot_with_error_bars(df, title, filename, x="Threads", hue="Benchmark", col="Param: poolSize", col_wrap=2,
+                              print_data=False,
                               formatter=tkr.FuncFormatter(lambda y, p: "{:,}".format(y))):
     unit = df['Unit'].unique()[0]
     print("Creating chart: " + title + ", filename: " + filename + ".")
@@ -84,27 +85,28 @@ def save_plot_with_error_bars(df, title, filename, x="Threads", col="Param: pool
     fig, ax = plt.subplots()
 
     x_values = sorted(df[x].unique())
-    benchmarks = sorted(df['Benchmark'].unique())
+    hue_values = sorted(df[hue].unique())
 
-    g = sns.FacetGrid(df, hue="Benchmark", col=col, size=5, aspect=1, col_wrap=2)
-    g = g.map_dataframe(barplot_with_errorbars, x, "Score", "Score Error (99.9%)", x_values, benchmarks)
+    g = sns.FacetGrid(df, hue=hue, col=col, size=5, aspect=1, col_wrap=col_wrap)
+    g = g.map_dataframe(barplot_with_errorbars, x, "Score", "Score Error (99.9%)", x_values, hue_values)
     for ax in g.axes.flatten():
         ax.yaxis.set_major_formatter(formatter)
     g.set_axis_labels(y_var="Score (" + unit + ")")
     plt.subplots_adjust(top=0.9, left=0.1)
     g.fig.suptitle(title)
-    plt.legend(loc='upper left', frameon=True)
+    plt.legend(loc='best', title=hue, frameon=True)
     plt.savefig(filename)
     plt.clf()
     plt.close(fig)
 
 
-def save_plots(df, title, filename_prefix, x="Threads", col="Param: poolSize"):
+def save_plots(df, title, filename_prefix, x="Threads", hue="Benchmark", col="Param: poolSize", col_wrap=2):
     # Save two plots with and without error bars
     # Plotting errorbars with dataframe data in factorplot is not directly supported.
     # First plot is important and must be used to verify the accuracy of the plot with error bars.
-    save_plot(df, title, filename_prefix + '.png', x=x, col=col)
-    save_plot_with_error_bars(df, title, filename_prefix + '-with-error-bars.png', x=x, col=col)
+    save_plot(df, title, filename_prefix + '.png', x=x, hue=hue, col=col, col_wrap=col_wrap)
+    save_plot_with_error_bars(df, title, filename_prefix + '-with-error-bars.png', x=x, hue=hue, col=col,
+                              col_wrap=col_wrap)
 
 
 def save_lmplot(df, x, title, filename, print_data=False):
@@ -144,8 +146,8 @@ def replace_benchmark_names(df):
 
 def save_percentile_plot(df, title_percentile, percentile):
     df_sample_percentile = df.loc[df['Benchmark'].str.endswith(percentile)]
-    save_plot(df_sample_percentile, title_percentile + "th Percentile Latency Comparison",
-              "latency" + title_percentile + ".png", formatter=tkr.FormatStrFormatter('%.2f'))
+    save_plot(df_sample_percentile, "Sample Time " + title_percentile + "th Percentile Comparison",
+              "sample-time-" + title_percentile + "th-percentile.png", formatter=tkr.FormatStrFormatter('%.2f'))
 
 
 def main():
@@ -169,6 +171,11 @@ def main():
     save_lmplot(df_thrpt[~pd.isnull(df_thrpt['Param: poolSize'])], "Param: poolSize", "Throughput vs Pool Sizes",
                 "lmplot-thrpt-vs-pool-sizes.png")
 
+    for benchmark in df_thrpt[~mask]['Benchmark'].unique():
+        df_benchmark_thrpt = df_thrpt[df_thrpt['Benchmark'] == benchmark]
+        save_plots(df_benchmark_thrpt, "Throughput vs Threads", benchmark + "-thrpt", col="Benchmark",
+                   hue="Param: poolSize", col_wrap=1)
+
     df_sample = df.loc[df['Mode'] == "sample"]
     # Score Error (99.9%) is NaN for percentiles
     df_sample_without_percentiles = df_sample[~pd.isnull(df_sample['Score Error (99.9%)'])]
@@ -183,6 +190,12 @@ def main():
     save_lmplot(df_sample_pools_without_percentiles, "Param: poolSize", "Sample Time vs Pool Sizes",
                 "lmplot-sample-vs-pool-sizes.png")
 
+    for benchmark in df_sample_pools_without_percentiles['Benchmark'].unique():
+        df_benchmark_sample = df_sample_pools_without_percentiles[
+            df_sample_pools_without_percentiles['Benchmark'] == benchmark]
+        save_plots(df_benchmark_sample, "Sample Time vs Threads", benchmark + "-sample-time", col="Benchmark",
+                   hue="Param: poolSize", col_wrap=1)
+
     save_percentile_plot(df_sample, '50', 'p0.50')
     save_percentile_plot(df_sample, '90', 'p0.90')
     save_percentile_plot(df_sample, '95', 'p0.95')
@@ -192,14 +205,15 @@ def main():
     save_percentile_plot(df_sample, '100', 'p1.00')
 
     df_sample_percentiles = df_sample.copy()
-    df_sample_percentiles = df_sample_percentiles.loc[pd.isnull(df_sample['Score Error (99.9%)'])]
+    df_sample_percentiles = df_sample_percentiles.loc[pd.isnull(df_sample_percentiles['Score Error (99.9%)'])]
     df_sample_percentiles['Pool'] = df_sample_percentiles['Benchmark'].str.extract('(?P<Pool>\w+Pool)', expand=True)
 
     df_sample_pool_percentiles = df_sample_percentiles.loc[~pd.isnull(df_sample_percentiles['Pool'])]
     unique_pools = df_sample_pool_percentiles['Pool'].unique()
     for pool in unique_pools:
-        save_plot(df_sample_percentiles.loc[df_sample_percentiles['Pool'] == pool], "Latency Percentiles for " + pool,
-                  pool + "-latency.png")
+        save_plot(df_sample_percentiles.loc[df_sample_percentiles['Pool'] == pool],
+                  "Sample Time Percentiles for " + pool,
+                  pool + "-sample-time-percentiles.png")
 
     print("Done")
 
