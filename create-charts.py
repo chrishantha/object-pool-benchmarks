@@ -31,7 +31,7 @@ sns.set_style("darkgrid")
 sns.set_palette(sns.color_palette("tab20", n_colors=11))
 
 
-def print_data(df):
+def print_dataframe(df):
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
         print(df)
 
@@ -41,7 +41,7 @@ def save_plot(df, title, filename, x="Threads", hue="Benchmark", col="Param: poo
     unit = df['Unit'].unique()[0]
     print("Creating chart: " + title + ", filename: " + filename + ".")
     if print_data:
-        print_data(df)
+        print_dataframe(df)
     fig, ax = plt.subplots()
     g = sns.factorplot(x=x, y="Score", hue=hue, col=col, data=df, kind='bar',
                        size=5, aspect=1, col_wrap=col_wrap, legend=False)
@@ -81,7 +81,7 @@ def save_plot_with_error_bars(df, title, filename, x="Threads", hue="Benchmark",
     unit = df['Unit'].unique()[0]
     print("Creating chart: " + title + ", filename: " + filename + ".")
     if print_data:
-        print_data(df)
+        print_dataframe(df)
     fig, ax = plt.subplots()
 
     x_values = sorted(df[x].unique())
@@ -100,20 +100,21 @@ def save_plot_with_error_bars(df, title, filename, x="Threads", hue="Benchmark",
     plt.close(fig)
 
 
-def save_plots(df, title, filename_prefix, x="Threads", hue="Benchmark", col="Param: poolSize", col_wrap=2):
+def save_plots(df, title, filename_prefix, x="Threads", hue="Benchmark", col="Param: poolSize", col_wrap=2,
+               print_data=False):
     # Save two plots with and without error bars
     # Plotting errorbars with dataframe data in factorplot is not directly supported.
     # First plot is important and must be used to verify the accuracy of the plot with error bars.
-    save_plot(df, title, filename_prefix + '.png', x=x, hue=hue, col=col, col_wrap=col_wrap)
+    save_plot(df, title, filename_prefix + '.png', x=x, hue=hue, col=col, col_wrap=col_wrap, print_data=print_data)
     save_plot_with_error_bars(df, title, filename_prefix + '-with-error-bars.png', x=x, hue=hue, col=col,
-                              col_wrap=col_wrap)
+                              col_wrap=col_wrap, print_data=print_data)
 
 
 def save_lmplot(df, x, title, filename, print_data=False):
     unit = df['Unit'].unique()[0]
     print("Creating chart: " + title + ", filename: " + filename + ".")
     if print_data:
-        print_data(df)
+        print_dataframe(df)
     fig, ax = plt.subplots()
     markers_length = len(df["Benchmark"].unique())
     g = sns.lmplot(data=df, x=x, y="Score", hue="Benchmark", size=6, legend=False, x_jitter=0.2, y_jitter=0.5,
