@@ -32,32 +32,30 @@ RESULTS_DIR=$ROOT_DIR/results
 mkdir -p $RESULTS_DIR
 
 forks=2
-warmup_iterations=3
-warmup_time=1
-iterations=3
+warmup_iterations=4
+warmup_time=2
+iterations=4
 measurement_time=2
-threads=(1 20 40 60)
-poolSizes=(20 40 60 80)
+threads=(1 20 40 60 80)
+# Parameter to benchmarks
+poolSizes="20,40,60,80"
 
 objectpools_benchmark() {
     echo "# Running object pool benchmark. Benchmark Mode: $BM_MODE Time Unit: $TIME_UNIT Threads: $1 Pool Size: $2"
-    java -Xms1g -Xmx1g -jar $ROOT_DIR/target/benchmarks.jar -jvmArgs "-Xms1g -Xmx1g" -bm $BM_MODE -tu $TIME_UNIT \
-        -f $forks -wi $warmup_iterations -i $iterations -t $1 -p poolSize=$2 \
+    java -Xms2g -Xmx2g -jar $ROOT_DIR/target/benchmarks.jar -jvmArgs "-Xms2g -Xmx2g" -bm $BM_MODE -tu $TIME_UNIT \
+        -f $forks -wi $warmup_iterations -i $iterations -t $1 -p poolSize=$poolSizes \
         -w $warmup_time -r $measurement_time \
-        -rff "$RESULTS_DIR/results-$1-threads-with-pool-size-$2.csv" -rf csv -e simple
+        -rff "$RESULTS_DIR/results-$1-threads.csv" -rf csv -e simple
 }
 
 benchmark_iteration=0
 # Running benchmarks
-total=$((${#threads[@]} * ${#poolSizes[@]}))
+total=${#threads[@]}
 
 for t in ${threads[@]}
 do
-    for p in ${poolSizes[@]}
-    do
-        objectpools_benchmark $t $p
-        benchmark_iteration=$(($benchmark_iteration + 1))
-        awk -v i="$benchmark_iteration" -v t="$total" \
-            'BEGIN{printf "# Object Pools Benchmark Progress: %.2f%s complete\n", i/t * 100, "%"}'
-    done
+    objectpools_benchmark $t
+    benchmark_iteration=$(($benchmark_iteration + 1))
+    awk -v i="$benchmark_iteration" -v t="$total" \
+        'BEGIN{printf "# Object Pools Benchmark Progress: %.2f%s complete\n", i/t * 100, "%"}'
 done
