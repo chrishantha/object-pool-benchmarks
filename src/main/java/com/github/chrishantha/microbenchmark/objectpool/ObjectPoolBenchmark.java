@@ -59,6 +59,7 @@ public abstract class ObjectPoolBenchmark<T> {
     @Benchmark
     public void useObject(Blackhole blackhole) throws Exception {
         T object = borrowObject();
+        Blackhole.consumeCPU(1_000L);
         useObject(object, blackhole);
         releaseObject(object);
     }

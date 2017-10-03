@@ -33,7 +33,7 @@ public abstract class AbstractStormpotObjectPoolBenchmark extends ObjectPoolBenc
 
     private LifecycledPool<PoolableTestObject> objectPool;
 
-    private final Timeout timeout = new Timeout(10, TimeUnit.SECONDS);
+    private final Timeout timeout = new Timeout(2, TimeUnit.MINUTES);
 
     public static class PoolableTestObject extends TestObject implements Poolable {
 

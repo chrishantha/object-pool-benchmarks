@@ -44,6 +44,8 @@ public class TestObjectBenchmark {
     @Benchmark
     public void expensiveObjectCreate(Blackhole blackhole) {
         TestObject testObject = new TestObject(true);
+        // Consume the CPU for same number of tokens as in ObjectPoolBenchmark class
+        Blackhole.consumeCPU(1_000L);
         blackhole.consume(testObject.getData());
     }
 
