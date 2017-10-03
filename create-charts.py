@@ -64,14 +64,18 @@ def save_plot(df, title, filename, x="Threads", hue="Benchmark", col="Param: poo
 def barplot_with_errorbars(x, y, yerr, x_values, hue_values, label, **kwargs):
     # x_values and benchmarks must be sorted
     data = kwargs.pop("data")
-    n = np.arange(len(x_values))
+    x_values_length = len(x_values)
+    n = np.arange(x_values_length)
     offsets = (np.arange(len(hue_values)) - np.arange(len(hue_values)).mean()) / (len(hue_values) + 1.)
     width = np.diff(offsets).mean()
     # Make sure x axis data is sorted
     data = data.sort_values(x)
+    data_length = len(data)
+    if data_length < x_values_length:
+        print('WARN: Not enough data points for %s. Expected %d, Found %d' % (label, x_values_length, data_length))
     for i, benchmark in enumerate(hue_values):
         if label == benchmark:
-            plt.bar(n + offsets[i], data[y], width=width, label=label, yerr=data[yerr], capsize=2)
+            plt.bar(n[:data_length] + offsets[i], data[y], width=width, label=label, yerr=data[yerr], capsize=2)
     plt.xticks(n, x_values)
 
 
@@ -137,11 +141,18 @@ def replace_benchmark_names(df):
                     regex=True)
     df = df.replace([r'^com\.github\.chrishantha\.microbenchmark\.objectpool\.(.*)Benchmark.useObject:useObject(.*)$'],
                     [r'\1\2'], regex=True)
+    # Profiler Details
+    df = df.replace([r'^com\.github\.chrishantha\.microbenchmark\.objectpool\.(.*)Benchmark.useObject:(.*)$'],
+                    [r'\1\2'], regex=True)
     df = df.replace('com.github.chrishantha.microbenchmark.objectpool.TestObjectBenchmark.expensiveObjectCreate',
                     'OnDemandExpensiveObject', regex=False)
     df = df.replace(
         r'^com\.github\.chrishantha\.microbenchmark\.objectpool\.TestObjectBenchmark\.expensiveObjectCreate' +
         r':expensiveObjectCreate(.*)$', r'OnDemandExpensiveObject\1', regex=True)
+    # Profiler Details
+    df = df.replace(
+        r'^com\.github\.chrishantha\.microbenchmark\.objectpool\.TestObjectBenchmark\.expensiveObjectCreate' +
+        r':(.*)$', r'OnDemandExpensiveObject\1', regex=True)
     return df
 
 
@@ -152,7 +163,7 @@ def save_percentile_plot(df, title_percentile, percentile):
 
 
 def main():
-    all_results = glob.glob("*.csv")
+    all_results = glob.glob("results-*-threads.csv")
     print("Creating charts using data in following files:")
     for file in all_results:
         print(file)
@@ -161,31 +172,39 @@ def main():
     df = pd.concat(map(pd.read_csv, all_results), ignore_index=True)
     df = replace_benchmark_names(df)
 
-    df_thrpt = df.loc[df['Mode'] == "thrpt"]
+    df.to_csv('all_results.csv')
 
-    mask = df_thrpt['Benchmark'].isin(['OnDemandExpensiveObject'])
-    save_plots(df_thrpt[~mask], "Throughput vs Threads Comparison", "thrpt-vs-threads")
-    save_plots(df_thrpt[~mask], "Throughput vs Pool Sizes Comparison", "thrpt-vs-pool-sizes", col="Threads",
+    thrpt_unit = 'ops/ms'
+    sample_unit = 'ms/op'
+    alloc_rate_unit = 'MB/sec'
+
+    df_thrpt = df.loc[(df['Mode'] == "thrpt") & (df['Unit'] == thrpt_unit)]
+
+    thrpt_mask = df_thrpt['Benchmark'].isin(['OnDemandExpensiveObject'])
+    save_plots(df_thrpt[~thrpt_mask], "Throughput vs Threads Comparison", "thrpt-vs-threads")
+    save_plots(df_thrpt[~thrpt_mask], "Throughput vs Pool Sizes Comparison", "thrpt-vs-pool-sizes", col="Threads",
                x="Param: poolSize")
 
     save_lmplot(df_thrpt, "Threads", "Throughput vs Threads", "lmplot-thrpt-vs-threads.png")
     save_lmplot(df_thrpt[~pd.isnull(df_thrpt['Param: poolSize'])], "Param: poolSize", "Throughput vs Pool Sizes",
                 "lmplot-thrpt-vs-pool-sizes.png")
 
-    for benchmark in df_thrpt[~mask]['Benchmark'].unique():
+    for benchmark in df_thrpt[~thrpt_mask]['Benchmark'].unique():
         df_benchmark_thrpt = df_thrpt[df_thrpt['Benchmark'] == benchmark]
         save_plots(df_benchmark_thrpt, "Throughput vs Threads", benchmark + "-thrpt", col="Benchmark",
                    hue="Param: poolSize", col_wrap=1)
 
-    df_sample = df.loc[df['Mode'] == "sample"]
+    df_sample = df.loc[(df['Mode'] == "sample") & (df['Unit'] == sample_unit)]
     # Score Error (99.9%) is NaN for percentiles
     df_sample_without_percentiles = df_sample[~pd.isnull(df_sample['Score Error (99.9%)'])]
     df_sample_pools_without_percentiles = df_sample_without_percentiles[
         ~pd.isnull(df_sample_without_percentiles['Param: poolSize'])]
 
-    save_plots(df_sample_without_percentiles, "Sample Time vs Threads Comparison", "sample-time-vs-threads")
-    save_plots(df_sample_pools_without_percentiles, "Sample Time vs Pool Sizes Comparison", "sample-time-vs-pool-sizes",
-               col="Threads", x="Param: poolSize")
+    sample_mask = df_sample_without_percentiles['Benchmark'].isin(['OnDemandExpensiveObject'])
+    save_plots(df_sample_without_percentiles[~sample_mask], "Sample Time vs Threads Comparison",
+               "sample-time-vs-threads")
+    save_plots(df_sample_pools_without_percentiles, "Sample Time vs Pool Sizes Comparison",
+               "sample-time-vs-pool-sizes", col="Threads", x="Param: poolSize")
 
     save_lmplot(df_sample_without_percentiles, "Threads", "Sample Time vs Threads", "lmplot-sample-vs-threads.png")
     save_lmplot(df_sample_pools_without_percentiles, "Param: poolSize", "Sample Time vs Pool Sizes",
@@ -215,6 +234,20 @@ def main():
         save_plot(df_sample_percentiles.loc[df_sample_percentiles['Pool'] == pool],
                   "Sample Time Percentiles for " + pool,
                   pool + "-sample-time-percentiles.png")
+
+    # Save gc.alloc.rate plots
+    df_alloc = df.loc[(df['Unit'] == alloc_rate_unit) & (df['Benchmark'].str.endswith('gc.alloc.rate'))]
+    df_alloc = df_alloc.replace([r'^(.*)·gc.alloc.rate$'], [r'\1'], regex=True)
+    df_thrpt_alloc = df_alloc[df_alloc['Mode'] == "thrpt"]
+    df_thrpt_alloc_mask = df_thrpt_alloc['Benchmark'].isin(['OnDemandExpensiveObject'])
+    save_plots(df_thrpt_alloc[~df_thrpt_alloc_mask], "GC Allocation Rate vs Threads Comparison",
+               "gc-alloc-rate-vs-threads")
+    save_plots(df_thrpt_alloc[~df_thrpt_alloc_mask], "GC Allocation Rate vs Pool Sizes Comparison",
+               "gc-alloc-rate-vs-pool-sizes", col="Threads", x="Param: poolSize")
+
+    save_lmplot(df_thrpt_alloc, "Threads", "Throughput vs Threads", "lmplot-gc-alloc-rate-vs-threads.png")
+    save_lmplot(df_thrpt_alloc[~pd.isnull(df_thrpt_alloc['Param: poolSize'])], "Param: poolSize",
+                "Throughput vs Pool Sizes", "lmplot-gc-alloc-rate-vs-pool-sizes.png")
 
     print("Done")
 

@@ -20,8 +20,8 @@
 ROOT_DIR=$(dirname "$0")
 # Benchmark using Throughput and Sample Modes
 BM_MODE="thrpt,sample"
-# Results will be in microseconds
-TIME_UNIT="us"
+# Results will be in milliseconds
+TIME_UNIT="ms"
 
 if [[ ! -f $ROOT_DIR/target/benchmarks.jar  ]]; then
     echo "Please build the benchmark project"
@@ -32,20 +32,21 @@ RESULTS_DIR=$ROOT_DIR/results
 mkdir -p $RESULTS_DIR
 
 forks=2
-warmup_iterations=4
-warmup_time=2
-iterations=4
-measurement_time=2
-threads=(1 20 40 60 80)
-# Parameter to benchmarks
-poolSizes="20,40,60,80"
+warmup_iterations=5
+warmup_time=1
+iterations=5
+measurement_time=1
+# Threads are in descending order to identify issues quickly
+threads=(80 40 20)
+# "poolSize" parameter to benchmarks
+poolSizes="30,60,90,120"
 
 objectpools_benchmark() {
-    echo "# Running object pool benchmark. Benchmark Mode: $BM_MODE Time Unit: $TIME_UNIT Threads: $1 Pool Size: $2"
+    echo "# Running object pool benchmark. Benchmark Mode: $BM_MODE Time Unit: $TIME_UNIT Threads: $1 Pool Sizes: $poolSizes"
     java -Xms2g -Xmx2g -jar $ROOT_DIR/target/benchmarks.jar -jvmArgs "-Xms2g -Xmx2g" -bm $BM_MODE -tu $TIME_UNIT \
         -f $forks -wi $warmup_iterations -i $iterations -t $1 -p poolSize=$poolSizes \
-        -w $warmup_time -r $measurement_time \
-        -rff "$RESULTS_DIR/results-$1-threads.csv" -rf csv -e simple
+        -w $warmup_time -r $measurement_time -v EXTRA -prof gc \
+        -rff "$RESULTS_DIR/results-$1-threads.csv" -rf csv -e simple -e SoftReference
 }
 
 benchmark_iteration=0
