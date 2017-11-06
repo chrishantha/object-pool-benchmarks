@@ -24,9 +24,9 @@ Build the benchmarks using Apache Maven
 
 ## Running the benchmarks
 
-Run the benchmarks using the `benchmark.sh` script.
+Run the benchmarks using the `benchmark.sh` script. I recommend following command.
 
-    ./benchmark.sh
+    time ./benchmark.sh 2>&1 | tee benchmark.log
 
 This script will run the benchmarks for different number of threads and different number of object pool sizes.
 
@@ -37,6 +37,11 @@ The results of the all benchmarks will be saved in `results` directory.
 ## Plotting Charts from the results
 
 The results from all benchmarks can be visualized using the `create-charts.py` Python script.
+
+The script is tested only with Python 3.6. Please make sure to install seaborn module, which will also install other
+ dependencies
+
+    python3.6 -m pip install seaborn
 
 The script must be run inside the `results` directory.
 
