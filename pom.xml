@@ -91,7 +91,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.6.1</version>
+                <version>3.7.0</version>
                 <configuration>
                     <compilerVersion>${javac.target}</compilerVersion>
                     <source>${javac.target}</source>
@@ -101,7 +101,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>3.1.0</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -171,7 +171,7 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>2.20</version>
+                    <version>2.20.1</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -184,7 +184,7 @@
         <uberjar.name>benchmarks</uberjar.name>
         <!-- Object Pool Implementations -->
         <commons.pool.version>1.6</commons.pool.version>
-        <commons.pool2.version>2.4.2</commons.pool2.version>
+        <commons.pool2.version>2.4.3</commons.pool2.version>
         <eraasoft.objectpool.version>1.1.2</eraasoft.objectpool.version>
         <fast.object.pool.version>2.1.0</fast.object.pool.version>
         <vibur.object.pool.version>20.0</vibur.object.pool.version>
