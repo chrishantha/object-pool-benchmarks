@@ -7,11 +7,18 @@ import org.openjdk.jmh.infra.Blackhole;
  */
 public class TestObject {
 
-    private final String data = TestObject.class.getName();
+    private String data = TestObject.class.getName();
 
     public TestObject(boolean expensive) {
         if (expensive) {
             Blackhole.consumeCPU(10_000L);
+            StringBuilder stringBuilder = new StringBuilder();
+            for (int i = 0; i < 10_000L; i++) {
+                for (int j = '0'; j <= 'z'; j++) {
+                    stringBuilder.append((char) j);
+                }
+            }
+            data = stringBuilder.toString();
         }
     }
 
