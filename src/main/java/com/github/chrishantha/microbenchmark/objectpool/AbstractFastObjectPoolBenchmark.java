@@ -29,13 +29,13 @@ public abstract class AbstractFastObjectPoolBenchmark extends ObjectPoolBenchmar
 
     private ObjectPool<TestObject> objectPool;
 
-    public abstract ObjectPool createPool(PoolConfig config, ObjectFactory<TestObject> factory);
+    public abstract ObjectPool<TestObject> createPool(PoolConfig config, ObjectFactory<TestObject> factory);
 
     @Override
     public void setupObjectPool() {
         PoolConfig config = new PoolConfig();
         config.setMaxSize(poolSize);
-        objectPool = createPool<>(config, new ObjectFactory<TestObject>() {
+        objectPool = createPool(config, new ObjectFactory<TestObject>() {
             @Override
             public TestObject create() {
                 return new TestObject(true);
