@@ -17,6 +17,7 @@ package com.github.chrishantha.microbenchmark.objectpool;
 
 import cn.danielw.fop.ObjectFactory;
 import cn.danielw.fop.ObjectPool;
+import cn.danielw.fop.DisruptorObjectPool;
 import cn.danielw.fop.PoolConfig;
 import cn.danielw.fop.Poolable;
 import com.github.chrishantha.microbenchmark.objectpool.object.TestObject;
@@ -25,10 +26,9 @@ import org.openjdk.jmh.infra.Blackhole;
 /**
  * Benchmark for Fast-Object-Pool. Code is at https://github.com/DanielYWoo/fast-object-pool
  */
-public class FastObjectPoolBenchmark extends AbstractFastObjectPoolBenchmark {
+public class FastObjectPoolDisruptorBenchmark extends AbstractFastObjectPoolBenchmark {
 
     public ObjectPool createPool(PoolConfig config, ObjectFactory<TestObject> factory) {
-        return new ObjectPool<>(config, factory);
+        return new DisruptorObjectPool<>(config, factory);
     }
-
 }
